@@ -190,7 +190,8 @@
     <div class="h-progress" onclick="showStatInfo('spirit')"><span>灵力</span><div class="h-progress-bar"><div class="h-progress-inner bar-spirit" id="h-spirit-bar"></div></div><span id="h-spirit-text">100/100</span></div>
     <div class="h-stats">
       <span class="h-stat-item" id="h-stone" onclick="showStatInfo('currency')">货币 0</span>
-      <span class="h-stat-item" id="h-rep" onclick="showStatInfo('rep')">声望 0</span>
+      <span class="h-stat-item" id="h-rep" onclick="showStatInfo('reputation')">声望 0</span>
+      <span class="h-stat-item" id="h-qi" onclick="showStatInfo('qi')">正气 10</span>
       <span class="h-stat-item" id="h-life" onclick="showStatInfo('life')">寿命 18/60</span>
       <span class="h-stat-item clickable" id="h-spirit-status" onclick="openSubPage('spiritPage')">状态: 充盈</span>
       <span class="h-stat-item" id="h-resist" onclick="showStatInfo('resistance')">耐药性 0/24</span>
@@ -550,6 +551,7 @@ const CONFIG = {
     { id: 'e_subweapon', name: '木质短剑', type: 'subweapon', price: 50, icon: '🗡️', stats: '攻击+3', desc: '入门副武器。' },
     { id: 'e_helmet', name: '布帽', type: 'helmet', price: 40, icon: '🪖', stats: '防御+2', desc: '普通布帽。' },
     { id: 'e_armor', name: '粗布衣', type: 'armor', price: 50, icon: '🥋', stats: '防御+3', desc: '缝缝补补又三年。' },
+    { id: 'e_armor2', name: '灵蚕甲', type: 'armor', price: 150, icon: '🥋', stats: '防御+10', desc: '可以抵御法则之力的蚕丝甲。' },
     { id: 'e_shoes', name: '轻巧鞋', type: 'shoes', price: 60, icon: '👟', stats: '闪避+2%', desc: '穿上健步如飞。' },
     { id: 'e_gloves', name: '皮手套', type: 'gloves', price: 45, icon: '🧤', stats: '防御+1', desc: '普通皮手套。' },
     { id: 'e_necklace', name: '木灵符', type: 'necklace', price: 60, icon: '🧿', stats: '攻击+2', desc: '普通的护身符。' },
@@ -575,10 +577,6 @@ const CONFIG = {
 
   // ============================================================
   // 神兵体系（模板化）
-  // typeGroup: 兵司 / 碎片 / 成兵 / 神器
-  // stats 可包含攻击/防御/生命/暴击/闪避等
-  // req: reqRealm 境界 / reqRoot 灵根 / reqBody 体质 / reqStats 属性要求
-  // 碎片 sideEffects[i].clear: 消除条件（secret/equip/material）
   // ============================================================
   armoryItems: [
     // ---- 兵司铸制式武器（1-9品）----
@@ -617,13 +615,11 @@ const CONFIG = {
     { id: 'cb1', name: '成兵·焚天', typeGroup: '成兵', grade: '大道', type: 'weapon',
       fragmentId: 'df1', reqRealm: 3, reqRoot: '火灵根', reqBody: null, reqStats: { wu: 12 },
       stats: '攻击+180 防御+30 暴击+5% 生命+120',
-      reqMaterials: { '铁骨花': 10, '蛇蜕草': 10 }, reqSecrets: { 's1': 100 },
-      source: '火之碎片+材料炼化', desc: '由火之法则碎片消除副作用而成。' },
+      source: '火之碎片消除所有副作用后自动进化', desc: '由火之法则碎片进化而成。' },
     { id: 'cb2', name: '成兵·玄渊', typeGroup: '成兵', grade: '大道', type: 'weapon',
       fragmentId: 'df2', reqRealm: 3, reqRoot: '水灵根', reqBody: null, reqStats: { mind: 15 },
       stats: '攻击+280 防御+45 生命+200 闪避+4%',
-      reqMaterials: { '血灵芝': 15, '驱邪叶': 10 }, reqSecrets: { 's3': 80 },
-      source: '水之碎片+材料炼化', desc: '由水之法则碎片炼化。' },
+      source: '水之碎片消除所有副作用后自动进化', desc: '由水之法则碎片进化而成。' },
 
     // ---- 神器（世界级·不开放）----
     { id: 'ss1', name: '???·神器', typeGroup: '神器', grade: '世界', type: 'weapon', stats: '???', reqRealm: 5, locked: true, source: '???' }
@@ -631,7 +627,6 @@ const CONFIG = {
 
   dreamStories: [ { text: "迷雾中有一棵散发金光的古树。", options: [{ text: "触摸古树", reward: "状态充盈，修为+20", action: 'dreamBuff' }] } ],
 
-  // 固定奇遇（含固定对战角色）
   dateEvents: [
     { id: 'ev1', month: 6, check: (s, p) => p.sect.includes('学院') || p.path === '法修', title: '学徒晋升', desc: '半年的勤勉让你从魔法学徒晋升为初级法师！', reward: '声望+20', newTitle: '初级法师' },
     { id: 'ev2', month: 12, check: (s, p) => p.path === '体修', title: '杂役晋升', desc: '一年的挑水劈柴，长老提拔你为外门弟子！', reward: '声望+30', newTitle: '外门弟子' },
@@ -649,7 +644,7 @@ const CONFIG = {
     { stage: 1, title: "剿灭山贼", reqDesc: "需达到 二品初期", reqCheck: (s) => s.realmTier >= 2,
       steps: {
         start: { text: "长老：山下的村子被山贼劫掠，你且去走一遭。", options: [{ text: "领命", action: 'next', nextNode: 'go' }, { text: "等等再说", action: 'close' }] },
-        go: { text: "你来到山下，发现贼首凶悍异常！", options: [{ text: "斩妖除魔！", action: 'finish', isBattle: true, enemyName: '山贼首领', enemyHp: 200, enemyAtk: 25, rewardStr: "声望+20", nextStage: 2, apply: (s) => { s.rep += 20; } }] }
+        go: { text: "你来到山下，发现贼首凶悍异常！", options: [{ text: "斩妖除魔！", action: 'finish', isBattle: true, enemyName: '山贼首领', enemyHp: 200, enemyAtk: 25, rewardStr: "声望+20", nextStage: 2, apply: (s) => { s.reputation += 20; } }] }
       }
     }
   ],
@@ -661,7 +656,7 @@ const CONFIG = {
         start: { text: '你走在街上，一个满脸横肉的恶霸拦住你：“新来的？交10个铜板保护费！”', options: [ { text: '给钱息事宁人', action: 'next', nextNode: 'pay', cost: 10 }, { text: '揍他一顿', action: 'battle', enemyName:'街头恶霸', hp: 50, atk: 5, rewardDesc: '声望+10' } ] },
         pay: { text: '恶霸拿了钱，哼着小曲走了。你心中有些憋屈。', options: [{ text: '忍气吞声', action: 'close' }] }
       },
-      onComplete: (s) => { s.rep += 10; }
+      onComplete: (s) => { s.reputation += 10; }
     },
     { id: 'sq1', name: '恶霸赵大锤', desc: '需二品·打坐20次', isHidden: false,
       reqCheck: (s) => s.realmTier >= 2 && s.meditateCount >= 20, 
@@ -669,7 +664,7 @@ const CONFIG = {
         start: { text: '你在集市上看到恶霸赵大锤正在强抢民女。', options: [ { text: '拔刀相助', action: 'next', nextNode: 'fight' }, { text: '明哲保身，悄悄离开', action: 'close' } ] },
         fight: { text: '赵大锤怒吼一声，抡起大锤向你砸来！', options: [{ text: '迎战', action: 'battle', enemyName:'赵大锤', hp: 200, atk: 25, rewardDesc: '声望+50，货币+100' }] }
       },
-      onComplete: (s) => { s.rep += 50; s.currency += 100; }
+      onComplete: (s) => { s.reputation += 50; s.currency += 100; }
     }
   ],
 
@@ -695,7 +690,6 @@ const CONFIG = {
   },
 
   mapData: {
-    // 五洲（已恢复）
     continents: [
       { id: 'zhongzhou', name: '中州', unlocked: true, desc: '七国争霸，灵气汇聚之地。' },
       { id: 'beiyuan', name: '北原', unlocked: false, desc: '极寒之地，妖狼肆虐，尚未开放。' },
@@ -734,19 +728,17 @@ const CONFIG = {
       { id: 'fl_qiguo', nationId: 'qiguo', name: '稷下残局', icon: '♟️', desc: '棋子化妖。', herb: { name: '铁骨花', icon: '🌸', chance: 0.28, count: 1 }, waves: { normalWaves: 3, baseHp: 100, baseAtk: 13, hpGrowth: 70, atkGrowth: 11, mul: 1.7 }, monsters: ['棋妖'], avatars: ['♟️'], monsterSkills: [{ name: '棋阵', chance: 0.35, dmgMul: 1.4, spiritCost: 15 }], isBoss: false, boss: null },
       { id: 'fl_jialong', nationId: 'jialong', name: '龙脊绝壁', icon: '🐲', desc: '不灭魔尊所在。', herb: { name: '龙涎根', icon: '🪢', chance: 0.25, count: 1 }, waves: { normalWaves: 3, baseHp: 120, baseAtk: 15, hpGrowth: 80, atkGrowth: 13, mul: 2.0 }, monsters: ['龙脊守卫'], avatars: ['🐲'], monsterSkills: [{ name: '龙息', chance: 0.3, dmgMul: 1.5, spiritCost: 20 }], isBoss: true, boss: { name: '不灭魔尊', hp: 999999, atk: 300, avatar: '👹', invincible: true } }
     ],
-    // NPC（含跨NPC互动任务链）
     npcs: [
       { id: 'npc1', landmarkId: 'l1', name: '守门弟子', icon: '🧑‍🦲', desc: '小石头门的守卫。', alignment: '正', zhengqi: 70, xieqi: 10, favorites: ['聚气散', '蛇蜕草'], joinReq: { minAffinity: 80 }, skills: [{ name: '铁拳', chance: 0.35, dmgMul: 1.3 }],
         lines: { greet: ['师弟来啦。', '今天守门，风有点大。'], join: ['我愿与你同行。'], backstab: ['……对不住了，师弟。'], sacrifice: ['快走！别管我！'], block: ['小心！我来挡！'] },
         daily: { start: { text: '守门弟子打了个哈欠：“有事吗？”', options: [ { text: '闲聊几句', action: 'next', nextNode: 'chat' }, { text: '离开', action: 'close' } ] }, chat: { text: '“最近后山不太平。”', options: [{ text: '多谢提醒', action: 'close' }] } },
         quest: { id: 'q_npc1', title: '守夜任务', canGive: (s) => s.realmTier >= 1 && !s.npcQuestDone['npc1'],
           steps: { start: { text: '“师弟能帮我守一夜吗？”', options: [ { text: '接受', action: 'npcAcceptQuest' }, { text: '改日吧', action: 'close' } ] }, active: { text: '“多谢师弟！这点心意请收下。”', options: [ { text: '完成任务（声望+15，货币+30）', action: 'npcCompleteQuest', reward: '声望+15，货币+30' } ] } },
-          onComplete: (s) => { s.rep += 15; s.currency += 30; } }
+          onComplete: (s) => { s.reputation += 15; s.currency += 30; } }
       },
       { id: 'npc2', landmarkId: 'l1', name: '杂役师兄', icon: '🧑‍🌾', desc: '忙碌的杂役。', alignment: '正', zhengqi: 40, xieqi: 20, favorites: ['福光果', '洗髓液'], joinReq: { minAffinity: 80 }, skills: [{ name: '扫帚连击', chance: 0.4, dmgMul: 1.1 }],
         lines: { greet: ['来帮忙吗？', '今天活儿不少。'], join: ['行，我跟你走一趟。'], backstab: ['……抱歉。'], sacrifice: ['别管我，走！'], block: ['我顶着！'] },
         daily: { start: { text: '杂役师兄放下扫帚：“来帮忙吗？”', options: [ { text: '闲聊', action: 'next', nextNode: 'chat' }, { text: '离开', action: 'close' } ] }, chat: { text: '“修行不易，一步一个脚印。”', options: [{ text: '受教了', action: 'close' }] } },
-        // 跨NPC互动任务链：杂役师兄 -> 守门弟子 -> 杂役师兄
         quest: { id: 'q_npc2', title: '传信任务', canGive: (s) => s.realmTier >= 1 && !s.npcQuestDone['npc2'],
           steps: {
             start: { text: '“帮我把这封信送给守门弟子吧，他就在门外。”', options: [ { text: '接受', action: 'npcAcceptQuest', questStage: 'delivering' }, { text: '没空', action: 'close' } ] },
@@ -761,7 +753,15 @@ const CONFIG = {
         daily: { start: { text: '“此阵沉睡已久，你且耐心等候。”', options: [ { text: '询问古阵', action: 'next', nextNode: 'ask' }, { text: '离开', action: 'close' } ] }, ask: { text: '“古阵连通的，是未知的远方……”', options: [{ text: '若有所思', action: 'close' }] } },
         quest: { id: 'q_npc3', title: '唤醒古阵', canGive: (s) => s.realmTier >= 2 && !s.npcQuestDone['npc3'],
           steps: { start: { text: '“要唤醒古阵，需你献上一份诚心。”', options: [ { text: '愿意', action: 'npcAcceptQuest' }, { text: '再考虑', action: 'close' } ] }, active: { text: '“阵纹已亮，多谢诚心。”', options: [ { text: '领取奖励（声望+20，货币+50）', action: 'npcCompleteQuest', reward: '声望+20，货币+50' } ] } },
-          onComplete: (s) => { s.rep += 20; s.currency += 50; } }
+          onComplete: (s) => { s.reputation += 20; s.currency += 50; } }
+      },
+      { id: 'npc_bingsi', landmarkId: 'l3', name: '兵司主簿', icon: '📜', desc: '负责发放兵司任务。', alignment: '正', zhengqi: 50, xieqi: 0, favorites: ['聚气散'], joinReq: { minAffinity: 100 }, skills: [],
+        lines: { greet: ['兵司重地，闲人免进。'], join: [''], backstab: [''], sacrifice: [''], block: [''] },
+        daily: { start: { text: '“想要兵司的武器？先证明你的实力。”', options: [ { text: '离开', action: 'close' } ] } },
+        quest: { id: 'q_bingsi1', title: '兵司一阶任务', canGive: (s) => s.bingsiTask1 === 0,
+          steps: { start: { text: '“去采集10份蛇蜕草交给我，我便赐你一阶兵司武器。”', options: [ { text: '接受', action: 'npcAcceptQuest' }, { text: '拒绝', action: 'close' } ] }, 
+                   active: { text: '“材料凑齐了吗？”', options: [ { text: '交付10份蛇蜕草', action: 'bingsiCompleteQuest', reward: '解锁一阶兵司武器' } ] } },
+          onComplete: (s) => { } }
       }
     ]
   },
@@ -772,15 +772,15 @@ const CONFIG = {
     { text: '灵气充沛的草地。', options: [ { text: '打坐片刻', reward: '灵力+20', apply: (s) => { s.spirit = Math.min(s.maxSpirit, s.spirit + 20); } } ] }
   ],
 
-  // 数值说明模板
   statInfo: {
     currency: { title:'货币', desc:'通用交易货币。', source:'杂活、任务、售卖、卫民巡逻、劫掠' },
-    rep: { title:'声望/气性', desc:'正数代表正气与声望，负数代表邪气。用于解锁秘籍条件、加入护卫队、武学上限等。', source:'任务、杂活（降妖除魔）、卫民巡逻、劫掠' },
+    reputation: { title:'声望', desc:'用于解锁部分秘籍条件、增加灵力上限。是禁地、吞天系统的核心奖励。', source:'任务、禁地打怪、卫民' },
+    qi: { title:'正气/邪气', desc:'影响精力上限和部分秘籍解锁。正数为正气，负数为邪气。', source:'杂活、任务、卫民、劫掠' },
     life: { title:'寿命', desc:'当前年龄/最大寿命。修为越高寿命上限越高。', source:'突破大境界增加' },
     resistance: { title:'耐药性', desc:'服用药物积累，达到上限无法继续服药。', source:'服药积累，洗髓液/洗髓丹清除' },
     cultivation: { title:'修为', desc:'积累至上限即突破小境界。大境界需战斗突破。', source:'打坐、杂活、丹药、任务奖励' },
     body: { title:'淬体', desc:'体修专属。积累至上限提升肉身阶段（1-5阶）。', source:'淬体药方熬炼' },
-    energy: { title:'精力', desc:'执行杂活、淬体等消耗。每月自动恢复。', source:'自然恢复' },
+    energy: { title:'精力', desc:'执行杂活、淬体等消耗。每月自动恢复。正气/邪气越高，精力上限越高。', source:'自然恢复' },
     spirit: { title:'灵力', desc:'战斗技能消耗。状态充盈/紊乱/枯竭影响法术威力。', source:'打坐、灵泉露、打坐恢复' },
     popularity: { title:'人气', desc:'魔修洗劫获得。可免疫NPC技能，消耗量与技能灵力相同。', source:'劫掠聚集地NPC、卫民' }
   },
@@ -835,7 +835,10 @@ let isDemonCultivator = (player.align === '邪');
 let state = {
   year: 1, month: 1, day: 1, lifespan: 18, maxLifespan: 60, 
   cultivation: 0, maxCultivation: CONFIG.breakthrough.baseMax, 
-  realmTier: 1, realmSub: 0, currency: 0, rep: 0, spirit: 100, maxSpirit: 100, spiritState: '充盈', resistance: 0, maxResistance: 24,
+  realmTier: 1, realmSub: 0, currency: 0, 
+  reputation: 0, 
+  zhengqi: (player.align === '邪' ? -10 : 10), 
+  spirit: 100, maxSpirit: 100, spiritState: '充盈', resistance: 0, maxResistance: 24,
   energy: 100, maxEnergy: 100, identity: null, mainStoryStage: 0, 
   bag: [], learnedSecrets: {}, bodyStage: 0, bodyProgress: 0, maxBodyProgress: 100,
   slots: [null, null, null, null], ownedRecipes: [], boughtBooks: [], boughtDrugs: {}, boughtHerbs: {}, bagCapacity: 96,
@@ -851,14 +854,19 @@ let state = {
   gatheringAffinity: {},
   guardJoined: {},
   guardPatrolCount: 0,
+  ownedFragments: [],
+  bingsiTask1: 0, // 0:未接 1:进行中 2:已完成
   battleBuff: {}
 };
+
 if (!state.boughtHerbs) state.boughtHerbs = {};
 if (state.popularity === undefined) state.popularity = 0;
 if (!state.gatheringState) state.gatheringState = {};
 if (!state.gatheringAffinity) state.gatheringAffinity = {};
 if (!state.guardJoined) state.guardJoined = {};
 if (!state.pillRecipes) state.pillRecipes = [];
+if (!state.ownedFragments) state.ownedFragments = [];
+if (state.bingsiTask1 === undefined) state.bingsiTask1 = 0;
 CONFIG.mapData.npcs.forEach(n => { if (state.npcAffinity[n.id] === undefined) state.npcAffinity[n.id] = 0; });
 CONFIG.mapData.gatheringSites.forEach(g => {
   if (!state.gatheringState[g.id]) state.gatheringState[g.id] = {};
@@ -917,7 +925,6 @@ function getCombatStats() {
   let baseDodge = rawDodge + cp.dodge;
   let baseCrit = rawCrit + cp.crit;
   let eqHp = 0, eqAtk = 0, eqDef = 0, eqDodge = 0, eqCrit = 0;
-  // 核对装备生效：遍历背包，isEquip && isEquipped
   state.bag.forEach(item => {
     if(item.isEquip && item.isEquipped && item.stats) {
       let mHp = item.stats.match(/生命\+(\d+)/); if(mHp) eqHp += parseInt(mHp[1]);
@@ -954,8 +961,8 @@ function checkSecretReq(sec) {
     if (reqStr === '需在商店购买') { if (!state.boughtBooks.includes(sec.id)) fails.push('需在商店购买'); return; }
     if (reqStr.includes('体修') && !isBodyCultivator) fails.push('需体修职业');
     if (reqStr.includes('法修') && !isLawCultivator) fails.push('需法修职业');
-    if (reqStr.includes('正气') && state.rep < parseInt(reqStr.match(/\d+/)[0])) fails.push('正气不足');
-    if (reqStr.includes('邪气') && state.rep > -parseInt(reqStr.match(/\d+/)[0])) fails.push('邪气不足');
+    if (reqStr.includes('正气') && state.zhengqi < parseInt(reqStr.match(/\d+/)[0])) fails.push('正气不足');
+    if (reqStr.includes('邪气') && state.zhengqi > -parseInt(reqStr.match(/\d+/)[0])) fails.push('邪气不足');
     if (reqStr.includes('心性')) { let v = player.stats.dao + cp.daoFlat; if (v < parseInt(reqStr.match(/\d+/)[0])) fails.push('心性不足'); }
     if (reqStr.includes('悟性')) { let v = player.stats.wu + cp.wuFlat; if (v < parseInt(reqStr.match(/\d+/)[0])) fails.push('悟性不足'); }
     if (reqStr.includes('神识')) { let v = player.stats.mind + cp.mindFlat; if (v < parseInt(reqStr.match(/\d+/)[0])) fails.push('神识不足'); }
@@ -974,7 +981,6 @@ function checkPillUnlock(recipe) {
   return { pass: fails.length === 0, fails };
 }
 
-// 神兵使用条件检查
 function checkArmoryReq(a) {
   let fails = [];
   if (a.reqRealm && state.realmTier < a.reqRealm) fails.push(`境界需${a.reqRealm}品`);
@@ -991,7 +997,6 @@ function checkArmoryReq(a) {
   return { pass: fails.length === 0, fails };
 }
 
-// 检查碎片副作用是否已全部消除
 function checkFragmentCleared(frag) {
   if (!frag || !frag.sideEffects) return { pass: true, fails: [], details: [] };
   let fails = [], details = [];
@@ -1018,7 +1023,6 @@ function checkFragmentCleared(frag) {
   return { pass: fails.length === 0, fails, details };
 }
 
-// 数值说明
 function showStatInfo(key) {
   let info = CONFIG.statInfo[key];
   if (!info) return;
@@ -1061,18 +1065,32 @@ function updateUI() {
     document.getElementById('h-body-prog').textContent = `${state.bodyProgress}/${state.maxBodyProgress}`;
     document.getElementById('h-body-bar').style.width = `${Math.min(100, (state.bodyProgress / state.maxBodyProgress) * 100)}%`;
   } else { document.getElementById('action-star').style.display = 'flex'; }
+  
+  // 精力上限关联正气/邪气
+  let qiBonus = Math.floor(Math.abs(state.zhengqi) / 10) * 5;
+  state.maxEnergy = 100 + qiBonus;
+  if (state.energy > state.maxEnergy) state.energy = state.maxEnergy;
+  
   document.getElementById('h-energy-text').textContent = `${state.energy}/${state.maxEnergy}`;
   document.getElementById('h-energy-bar').style.width = `${(state.energy / state.maxEnergy) * 100}%`;
   const cp = getCultivationPathBonus();
   let mindBonus = (player.stats.mind + cp.mindFlat) * 5;
-  let repBonus = Math.floor(state.rep / 10) * 2;
+  
+  // 灵力上限关联声望
+  let repBonus = Math.floor(state.reputation / 10) * 2; 
   let tierBase = CONFIG.SPIRIT_BASE_BY_TIER[state.realmTier] || 100;
   state.maxSpirit = Math.floor((tierBase + mindBonus + repBonus) * (1 + cp.spiritPct / 100));
   if(state.spirit > state.maxSpirit) state.spirit = state.maxSpirit;
   document.getElementById('h-spirit-text').textContent = `${Math.floor(state.spirit)}/${state.maxSpirit}`;
   document.getElementById('h-spirit-bar').style.width = `${(state.spirit / state.maxSpirit) * 100}%`;
+  
   document.getElementById('h-stone').textContent = `货币 ${Math.floor(state.currency)}`;
-  document.getElementById('h-rep').textContent = `声望 ${state.rep}`;
+  document.getElementById('h-rep').textContent = `声望 ${state.reputation}`;
+  
+  // 动态显示正气/邪气
+  let qiName = state.zhengqi >= 0 ? '正气' : '邪气';
+  document.getElementById('h-qi').textContent = `${qiName} ${Math.abs(state.zhengqi)}`;
+  
   document.getElementById('h-life').textContent = `寿命 ${state.lifespan}/${state.maxLifespan}`;
   document.getElementById('h-spirit-status').textContent = `状态: ${state.spiritState}`;
   document.getElementById('h-resist').textContent = `耐药性 ${state.resistance}/${state.maxResistance}`;
@@ -1113,7 +1131,6 @@ function updateUI() {
   document.getElementById('meditate-sub').textContent = `耗时${meditateDays}天·恢复灵力`;
 }
 
-// 固定奇遇（含固定对战角色）
 function triggerPendingEvent(ev) {
   if (!ev) return;
   if (ev.isBattle) {
@@ -1124,8 +1141,8 @@ function triggerPendingEvent(ev) {
   } else {
     state.triggeredDateEvents.push(ev.id);
     if (ev.newTitle) state.identity = ev.newTitle;
-    if (ev.reward.includes('声望+20')) state.rep += 20;
-    if (ev.reward.includes('声望+30')) state.rep += 30;
+    if (ev.reward.includes('声望+20')) state.reputation += 20;
+    if (ev.reward.includes('声望+30')) state.reputation += 30;
     logGlobal(`【固定奇遇】${ev.title}：${ev.desc} (奖励：${ev.reward})`);
   }
   updateUI();
@@ -1139,8 +1156,8 @@ function checkDateEvents() {
       if (ev.isBattle) { alert(`【固定奇遇】${ev.title}：${ev.desc}`); triggerBattle(ev.enemyName || ev.title, ev.enemyHp, ev.enemyAtk, 'event'); }
       else {
         logGlobal(`【固定奇遇】${ev.title}：${ev.desc} (奖励：${ev.reward})`);
-        if (ev.reward.includes('声望+20')) state.rep += 20;
-        if (ev.reward.includes('声望+30')) state.rep += 30;
+        if (ev.reward.includes('声望+20')) state.reputation += 20;
+        if (ev.reward.includes('声望+30')) state.reputation += 30;
         updateUI();
       }
     }
@@ -1171,7 +1188,7 @@ function advanceTime(days) {
       state.triggeredDateEvents.push(ev.id);
       if (ev.newTitle) state.identity = ev.newTitle;
       if (ev.isBattle) { alert(`【固定奇遇】${ev.title}：${ev.desc}`); triggerBattle(ev.enemyName || ev.title, ev.enemyHp, ev.enemyAtk, 'event'); }
-      else { logGlobal(`【固定奇遇】${ev.title}：${ev.desc} (奖励：${ev.reward})`); if (ev.reward.includes('声望+20')) state.rep += 20; if (ev.reward.includes('声望+30')) state.rep += 30; }
+      else { logGlobal(`【固定奇遇】${ev.title}：${ev.desc} (奖励：${ev.reward})`); if (ev.reward.includes('声望+20')) state.reputation += 20; if (ev.reward.includes('声望+30')) state.reputation += 30; }
     }
   });
 }
@@ -1207,9 +1224,6 @@ function triggerSettlement() {
   setTimeout(() => { localStorage.removeItem('playerData'); window.location.reload(); }, 1000);
 }
 
-// ================================================================
-// ======================= 打坐（无弹窗） ==========================
-// ================================================================
 function doMeditate() {
   let meditateDays = (state.realmTier - 1) * 4 + state.realmSub + 1;
   advanceTime(meditateDays);
@@ -1224,7 +1238,6 @@ function doMeditate() {
   state.cultivation += gain;
   state.spirit = Math.min(state.maxSpirit, state.spirit + 20);
   levelUp(); updateUI();
-  // 打坐不弹提示：改用 logGlobal 静默更新
   const hLoc = document.getElementById('h-loc');
   hLoc.innerHTML = `欢迎来到 <span style="color:${getSectColor()}; font-weight:bold;">${player.sect}</span> · 打坐${meditateDays}天 修为+${gain}`;
 }
@@ -1298,7 +1311,6 @@ function joinGuard(siteId) {
   renderGuardView();
 }
 
-// 卫民：消耗1月，组队打随机魔物
 function guardPatrol(siteId) {
   advanceTime(30);
   let hp = 100 + Math.floor(Math.random() * 150);
@@ -1307,7 +1319,6 @@ function guardPatrol(siteId) {
   triggerBattle('魔物入侵者', hp, atk, 'guard', '声望+30，正气+10，人气+5', true);
 }
 
-// 劫掠：消耗1月，1v1打最弱者，逐级加入
 function startRaid(siteId) {
   if (!isDemonCultivator) return alert('仅魔修可劫掠！');
   let site = CONFIG.mapData.gatheringSites.find(g => g.id === siteId);
@@ -1316,7 +1327,6 @@ function startRaid(siteId) {
   if (sorted.length === 0) return alert('聚集地已无人');
   if (!confirm(`劫掠${site.name}？消耗1个月，先单挑最弱者，随后每回合加入一位更强NPC。\n触发后该聚集地所有NPC好感清零。失败则永久死亡！`)) return;
   advanceTime(30);
-  // 触发即清零该聚集地所有好感
   site.leaders.forEach(l => { state.gatheringAffinity[l.id] = 0; });
 
   let target = sorted[0];
@@ -1756,7 +1766,6 @@ function findBlocker(b) {
   return null;
 }
 
-// 标记NPC死亡（聚集地NPC在副本中舍生/被背刺后永久死亡）
 function markNpcDead(npcId) {
   CONFIG.mapData.gatheringSites.forEach(g => {
     let l = g.leaders.find(x => x.id === npcId);
@@ -1765,7 +1774,6 @@ function markNpcDead(npcId) {
   removeFromParty(npcId);
 }
 
-// 背刺：好感清零（地标NPC和聚集地NPC都清零）
 function checkBackstab(trigger) {
   let b = state.battleState;
   if (!b || !b.party || b.isGuardMode) return false;
@@ -1780,7 +1788,6 @@ function checkBackstab(trigger) {
       let dmg = Math.floor(b.pMaxHp * 0.25);
       b.pHp -= dmg;
       logBattle(`【${p.name}】背刺！受到${dmg}伤害。`);
-      // 好感清零
       if (state.npcAffinity[p.id] !== undefined) state.npcAffinity[p.id] = 0;
       if (state.gatheringAffinity[p.id] !== undefined) state.gatheringAffinity[p.id] = 0;
       p.alive = false;
@@ -1804,7 +1811,7 @@ function checkSacrifice() {
       p.alive = false;
       if (state.npcAffinity[p.id] !== undefined) state.npcAffinity[p.id] = 0;
       if (state.gatheringAffinity[p.id] !== undefined) state.gatheringAffinity[p.id] = 0;
-      markNpcDead(p.id); // 舍生即死（包含聚集地NPC）
+      markNpcDead(p.id);
       renderBattlePartyRow();
       return true;
     }
@@ -1815,12 +1822,10 @@ function checkSacrifice() {
 function pickLine(arr) { if (!arr || arr.length === 0) return ''; return arr[Math.floor(Math.random() * arr.length)]; }
 function removeFromParty(npcId) { if (!state.party) return; for (let i = 0; i < state.party.length; i++) { if (state.party[i] === npcId) state.party[i] = null; } }
 
-// endBattle 主函数（含 raid 处理）
 function endBattle(win) {
   let b = state.battleState;
   if (!b) return;
 
-  // ---- 劫掠处理 ----
   if (b.type === 'raid') {
     closeSubPage('battlePage');
     state.spirit = b.pSpirit;
@@ -1830,7 +1835,6 @@ function endBattle(win) {
       if (currentTarget) state.gatheringState[b.raidSite][currentTarget.id].alive = false;
       b.raidIdx++;
       if (b.raidIdx < b.raidQueue.length) {
-        // 下一回合加入更高职位
         let next = b.raidQueue[b.raidIdx];
         alert(`击败${b.enemyName}！${next.name} 加入了战斗！`);
         state.battleState = {
@@ -1846,20 +1850,18 @@ function endBattle(win) {
         document.getElementById('battle-log').innerHTML += `<div>> ${next.name}出现！</div>`;
         return;
       }
-      // 全灭：大量奖励
       let popGain = 15 + Math.floor(Math.random() * 15);
       let coinGain = 200 + Math.floor(Math.random() * 200);
       let xieGain = 20;
       let repGain = 10;
       state.popularity += popGain;
       state.currency += coinGain;
-      state.rep -= xieGain; // 邪气
-      state.rep += repGain; // 声望（净效果表示恶名）
+      state.zhengqi -= xieGain;
+      state.reputation += repGain;
       alert(`聚集地劫掠成功！\n人气+${popGain}  货币+${coinGain}  邪气+${xieGain}  声望+${repGain}\n所有NPC好感已清零。`);
       updateUI();
       if (mapLevel === 5) renderGatheringNpcs();
     } else {
-      // 失败永久死亡
       alert('劫掠失败！你被乱棍打死，此世终结。');
       state.isSettled = true;
       setTimeout(() => { localStorage.removeItem('playerData'); window.location.reload(); }, 1200);
@@ -1868,13 +1870,13 @@ function endBattle(win) {
     return;
   }
 
-  // ---- 无尽禁地 ----
   if (b.type === 'endless') {
     if (win) {
       b.endlessKills = (b.endlessKills || 0) + 1;
       let w = b.wave;
       let coin = 10 * w;
       state.currency += coin; state.cultivation += 5 * w;
+      state.reputation += w; // 禁地每层加声望
       b.pHp = Math.min(b.pMaxHp, b.pHp + Math.floor(b.pMaxHp * 0.2));
       b.party.forEach(p => { if (p.alive) p.hp = Math.min(p.maxHp, p.hp + Math.floor(p.maxHp * 0.3)); });
       const land = CONFIG.mapData.forbiddenLands.find(l => l.id === state.endlessLandId);
@@ -1895,7 +1897,6 @@ function endBattle(win) {
     }
   }
 
-  // ---- 普通战斗 ----
   closeSubPage('battlePage');
   state.spirit = b.pSpirit;
   if (win) {
@@ -1911,10 +1912,10 @@ function endBattle(win) {
       state.activeSideQuest = null;
       alert(`击败${b.enemyName}！奖励：${b.rewardDesc}`);
     } else if (b.type === 'event') {
-      alert(`战胜奇遇敌人！`); state.rep += 10;
+      alert(`战胜奇遇敌人！`); state.reputation += 10;
     } else if (b.type === 'guard') {
-      // 卫民成功：声望 + 正气 + 人气
-      state.rep += 30;
+      state.reputation += 30;
+      state.zhengqi += 10;
       state.currency += 80;
       state.popularity += 5;
       alert(`卫民成功！声望+30，正气+10，人气+5，货币+80。`);
@@ -1931,7 +1932,6 @@ function endBattle(win) {
       state.spiritState = '紊乱';
       alert('心魔反噬，修为跌落。');
     } else if (b.type === 'mainStory') {
-      // 主线战斗死亡无惩罚
       alert('你倒下了……但天不绝人，被好心人救起。');
     } else {
       state.currency = Math.floor(state.currency * 0.9);
@@ -1978,16 +1978,51 @@ function openSubPage(id) {
 }
 function closeSubPage(id) { document.getElementById(id).classList.remove('show'); }
 
+// 重新设计支线渲染逻辑
 function renderSideQuestList() {
   let list = document.getElementById('sidequestList');
   list.innerHTML = '';
-  if (state.activeSideQuest) {
-    list.innerHTML += `<div class="list-item"><div class="item-header"><div class="item-info"><h4>${state.activeSideQuest.name} (进行中)</h4><p>${state.activeSideQuest.desc}</p></div></div><div class="item-action-row"><button onclick="triggerSideQuest()">进入剧情</button></div></div>`;
-  } else {
-    let available = CONFIG.sideQuests.find(q => !state.completedSideQuests.includes(q.id) && q.reqCheck(state));
-    if (available) { state.activeSideQuest = available; renderSideQuestList(); return; }
-    list.innerHTML += '<p style="text-align:center;color:#999;padding:20px;">暂无可触发支线。</p>';
+  let hasAny = false;
+  
+  CONFIG.sideQuests.forEach(q => {
+    if (state.completedSideQuests.includes(q.id)) return;
+    hasAny = true;
+    
+    let unlocked = q.reqCheck(state);
+    let isActive = state.activeSideQuest && state.activeSideQuest.id === q.id;
+    
+    let title = q.name;
+    let desc = q.desc;
+    
+    // 隐藏剧情处理
+    if (!unlocked && !isActive) {
+       if (q.isHidden) { title = '？？？'; desc = '未知的机缘...'; }
+       else { desc = '条件不足'; }
+    }
+
+    let btnHtml = `<button ${(unlocked || isActive) ? '' : 'disabled'} onclick="${isActive ? 'triggerSideQuest()' : `acceptSideQuest('${q.id}')`}">${isActive ? '进入剧情' : (unlocked ? '接取' : '未解锁')}</button>`;
+
+    list.innerHTML += `<div class="list-item">
+      <div class="item-header">
+        <div class="item-info">
+          <h4>${title} ${isActive ? '(进行中)' : ''}</h4>
+          <p>${desc}</p>
+        </div>
+      </div>
+      <div class="item-action-row">${btnHtml}</div>
+    </div>`;
+  });
+  
+  if (!hasAny) {
+    list.innerHTML = '<p style="text-align:center;color:#999;padding:20px;">暂无可触发支线。</p>';
   }
+}
+
+function acceptSideQuest(id) {
+  let q = CONFIG.sideQuests.find(x => x.id === id);
+  state.activeSideQuest = q;
+  renderSideQuestList();
+  updateUI();
 }
 
 function triggerSideQuest() { if (!state.activeSideQuest) return; currentSQData = state.activeSideQuest; currentSQNode = 'start'; renderSQNode(); }
@@ -2086,8 +2121,8 @@ function doJob(tab, i, count) {
       } else { state.day += daysLeft; daysLeft = 0; }
     }
     if (tab === 'daily') { if(data.n==='挑水') state.currency+=5; if(data.n==='劈柴') state.currency+=10; if(data.n==='采石') state.currency+=20; if(data.n==='矿洞挖掘') { state.currency+=50; state.spirit = Math.min(state.maxSpirit, state.spirit + 10); } if(data.n==='灵田照料') { state.currency+=100; state.spirit = Math.min(state.maxSpirit, state.spirit + 20); } }
-    else if (tab === 'spirit') { if(data.n==='道观祈福') state.rep += 5; if(data.n==='黑市交易') { state.rep -= 5; state.currency += 50; } if(data.n==='降妖除魔') state.rep += 20; if(data.n==='炼制魔功') { state.rep -= 20; state.cultivation += 50; } }
-    else { if(data.n==='搬运灵材') addToBag('蛇蜕草', '🌿'); if(data.n==='修筑阵法') addToBag('阵基石', '🧱'); if(data.n==='建造聚灵阵') { state.rep+=30; state.spirit = Math.min(state.maxSpirit, state.spirit + 50); } }
+    else if (tab === 'spirit') { if(data.n==='道观祈福') state.zhengqi += 5; if(data.n==='黑市交易') { state.zhengqi -= 5; state.currency += 50; } if(data.n==='降妖除魔') { state.zhengqi += 20; state.reputation += 10; } if(data.n==='炼制魔功') { state.zhengqi -= 20; state.cultivation += 50; } }
+    else { if(data.n==='搬运灵材') addToBag('蛇蜕草', '🌿'); if(data.n==='修筑阵法') addToBag('阵基石', '🧱'); if(data.n==='建造聚灵阵') { state.reputation+=30; state.spirit = Math.min(state.maxSpirit, state.spirit + 50); } }
     completed++;
   }
   if (completed > 0) { levelUp(); updateUI(); alert(`完成${completed}次。`); }
@@ -2159,8 +2194,24 @@ function renderPredecessor() {
 
 // 神兵渲染（带筛选+搜索）
 function renderArmory() {
+  let evolved = false;
+  CONFIG.armoryItems.filter(a => a.typeGroup === '成兵').forEach(cb => {
+    let frag = CONFIG.armoryItems.find(x => x.id === cb.fragmentId);
+    if (!frag) return;
+    let fragInBag = state.bag.find(i => i.name === frag.name && i.isEquip);
+    if (fragInBag) {
+      let clearCheck = checkFragmentCleared(frag);
+      if (clearCheck.pass) {
+        state.bag.splice(state.bag.indexOf(fragInBag), 1);
+        addToBag(cb.name, '⚔️', true, { type: 'weapon', stats: cb.stats, isArmory: true, armoryGrade: '大道', armoryGroup: '成兵' });
+        evolved = true;
+        alert(`【自动进化】${frag.name} 副作用已全消除，进化为【${cb.name}】！`);
+      }
+    }
+  });
+  if (evolved) { updateUI(); }
+
   let list = document.getElementById('predecessorList');
-  // 初始化筛选栏
   let groupBtns = [
     { key: '兵司', label: '兵司铸制' },
     { key: '碎片', label: '大道碎片' },
@@ -2184,7 +2235,7 @@ function renderArmoryList() {
   let wrap = document.getElementById('armoryList');
   if (!wrap) return;
   let items = CONFIG.armoryItems.filter(a => {
-    if (a.typeGroup === '神器' && !filterArmoryGroup) return false; // 默认不显示神器
+    if (a.typeGroup === '神器' && !filterArmoryGroup) return false;
     if (filterArmoryGroup && a.typeGroup !== filterArmoryGroup) return false;
     if (armorySearchKw) {
       let kw = armorySearchKw.toLowerCase();
@@ -2214,16 +2265,20 @@ function renderArmoryList() {
     if (a.typeGroup === '神器') {
       btnHtml = `<button disabled>未开放</button>`;
     } else if (a.typeGroup === '兵司') {
-      btnHtml = owned ? `<button disabled>已拥有</button>` : `<button ${req.pass?'':'disabled'} onclick="getArmoryItem('${a.id}')">领取（若完成兵司任务）</button>`;
+      if (state.bingsiTask1 !== 2) {
+        btnHtml = `<button disabled>需完成兵司主簿的一阶任务</button>`;
+      } else {
+        btnHtml = owned ? `<button disabled>已拥有</button>` : `<button ${req.pass?'':'disabled'} onclick="getArmoryItem('${a.id}')">领取（若完成兵司任务）</button>`;
+      }
     } else if (a.typeGroup === '碎片') {
-      btnHtml = owned ? `<button disabled>已拥有</button>` : `<button ${req.pass?'':'disabled'} onclick="getArmoryItem('${a.id}')">领取（若达成来源）</button>`;
+      let everOwned = state.ownedFragments.includes(a.id);
+      btnHtml = (owned || everOwned) ? `<button disabled>已获得</button>` : `<button ${req.pass?'':'disabled'} onclick="getArmoryItem('${a.id}')">领取（若达成来源）</button>`;
     } else if (a.typeGroup === '成兵') {
-      // 成兵：需拥有对应碎片且副作用全部消除
+      let evolvedCb = state.bag.find(i => i.name === a.name);
       let frag = CONFIG.armoryItems.find(x => x.id === a.fragmentId);
-      let fragOwned = frag && state.bag.find(i => i.name === frag.name);
+      let fragInBag = frag && state.bag.find(i => i.name === frag.name && i.isEquip);
       let clearCheck = frag ? checkFragmentCleared(frag) : { pass: false };
-      let canCraft = owned ? false : (fragOwned && clearCheck.pass && req.pass);
-      btnHtml = owned ? `<button disabled>已拥有</button>` : `<button ${canCraft?'':'disabled'} onclick="craftChengbing('${a.id}')">${canCraft?'炼成成兵':(!fragOwned?'缺对应碎片':(!clearCheck.pass?'副作用未消除':'条件不足'))}</button>`;
+      btnHtml = evolvedCb ? `<button disabled>已拥有</button>` : `<button disabled>${!fragInBag ? '需先获得对应碎片' : (!clearCheck.pass ? '碎片副作用未消除' : '可自动进化')}</button>`;
     }
     let clearDetails = '';
     if (a.typeGroup === '成兵' && a.fragmentId) {
@@ -2252,45 +2307,23 @@ function getArmoryItem(id) {
   if (!a) return;
   let req = checkArmoryReq(a);
   if (!req.pass) return alert('条件不足：' + req.fails.join('，'));
+  
+  if (a.typeGroup === '兵司' && state.bingsiTask1 !== 2) {
+    return alert('需先完成兵司主簿的一阶任务！');
+  }
+  
+  if (a.typeGroup === '碎片') {
+    if (!state.ownedFragments) state.ownedFragments = [];
+    if (state.ownedFragments.includes(a.id)) return alert('该碎片已获得过，无法重复获取！');
+    state.ownedFragments.push(a.id);
+  }
+  
   if (state.bag.find(i => i.name === a.name)) return alert('已拥有该物品！');
   addToBag(a.name, a.type === 'weapon' ? '⚔️' : '🔮', true, { 
     type: a.type, stats: a.stats, isArmory: true, armoryGrade: a.grade || '兵司', 
     armoryGroup: a.typeGroup, sideEffects: a.sideEffects, fragmentId: a.fragmentId 
   });
   alert(`获得【${a.name}】！`);
-  renderArmory();
-}
-
-function craftChengbing(id) {
-  let a = CONFIG.armoryItems.find(x => x.id === id);
-  if (!a) return;
-  if (state.bag.find(i => i.name === a.name)) return alert('已拥有！');
-  let req = checkArmoryReq(a);
-  if (!req.pass) return alert('使用条件不足：' + req.fails.join('，'));
-  let frag = CONFIG.armoryItems.find(x => x.id === a.fragmentId);
-  let hasFragment = frag && state.bag.find(i => i.name === frag.name && i.isEquip);
-  if (!hasFragment) return alert('缺少对应的法则碎片！');
-  let clearCheck = checkFragmentCleared(frag);
-  if (!clearCheck.pass) return alert('碎片副作用未全部消除：' + clearCheck.fails.join('、'));
-  // 材料检查
-  for (let m in a.reqMaterials || {}) {
-    let it = state.bag.find(i => i.name === m && !i.isEquip);
-    if (!it || it.count < a.reqMaterials[m]) return alert(`材料不足：${m}`);
-  }
-  // 秘籍进度检查
-  for (let sid in a.reqSecrets || {}) {
-    let prog = (state.learnedSecrets[sid] && state.learnedSecrets[sid].prog) || 0;
-    if (prog < a.reqSecrets[sid]) return alert(`秘籍进度不足：${CONFIG.secrets.find(x=>x.id===sid)?.name}`);
-  }
-  // 消耗材料与碎片
-  for (let m in a.reqMaterials || {}) { 
-    let it = state.bag.find(i => i.name === m && !i.isEquip); 
-    it.count -= a.reqMaterials[m]; 
-    if (it.count <= 0) state.bag.splice(state.bag.indexOf(it), 1); 
-  }
-  state.bag.splice(state.bag.indexOf(hasFragment), 1);
-  addToBag(a.name, '⚔️', true, { type: 'weapon', stats: a.stats, isArmory: true, armoryGrade: '大道', armoryGroup: '成兵' });
-  alert(`炼成【${a.name}】！`);
   renderArmory();
 }
 
@@ -2469,7 +2502,6 @@ function equipAction(index) {
   const item = state.bag[index];
   if (!item.isEquip) return;
   if (item.isEquipped) { unequip(item.type); return; }
-  // 神兵使用条件检查
   if (item.isArmory) {
     let a = CONFIG.armoryItems.find(x => x.name === item.name);
     if (a) {
@@ -2639,7 +2671,6 @@ function sellItem(idx) {
   alert(`卖出${total}货币！`); updateUI(); switchShopTab('sell');
 }
 
-// 购买：药物/药材不弹提示；秘籍/方子/装备弹提示
 function buyDrug(id) { 
   const d = CONFIG.shopDrugs.find(x => x.id === id); 
   if (state.currency < d.price) return alert('货币不足'); 
@@ -2694,7 +2725,6 @@ function buyEquip(id) {
   updateUI(); switchShopTab('equip'); 
 }
 
-// 人物渲染
 function renderCharacter() {
   document.getElementById('char-identity').textContent = state.identity || (isBodyCultivator ? '杂役弟子' : '魔法学徒');
   document.getElementById('char-realm-text').textContent = getRealmText();
@@ -3025,7 +3055,6 @@ function talkGatheringLeader(siteId, leaderId) {
   btn2.onclick = closeDialogue; optWrap.appendChild(btn2);
 }
 
-// 连续送礼（不退出）
 function giftGatheringLeader(siteId, leaderId) {
   let site = CONFIG.mapData.gatheringSites.find(g => g.id === siteId);
   let leader = site.leaders.find(l => l.id === leaderId);
@@ -3052,7 +3081,6 @@ function giveGatheringGift(siteId, leaderId, itemName) {
   state.gatheringAffinity[leaderId] = Math.min(100, (state.gatheringAffinity[leaderId] || 0) + gain);
   document.getElementById('infoModal').classList.remove('show');
   renderGatheringNpcs();
-  // 重新打开送礼界面（连续送礼）
   giftGatheringLeader(siteId, leaderId);
 }
 
@@ -3105,7 +3133,6 @@ function openGiftModal(npcId) {
   document.getElementById('infoModal').classList.add('show');
 }
 
-// 送礼（连续，不弹 alert 退出）
 function giveGift(npcId, itemName) {
   const npc = CONFIG.mapData.npcs.find(n => n.id === npcId);
   const item = state.bag.find(i => i.name === itemName && !i.isEquip);
@@ -3115,7 +3142,6 @@ function giveGift(npcId, itemName) {
   state.npcAffinity[npcId] = Math.min(100, (state.npcAffinity[npcId] || 0) + gain);
   document.getElementById('infoModal').classList.remove('show');
   updateUI(); if (mapLevel === 4) showNpcView();
-  // 重新打开送礼界面（连续送礼）
   setTimeout(() => openGiftModal(npcId), 50);
 }
 
@@ -3169,7 +3195,6 @@ function startNpcDialogue(npcId) {
   const npc = CONFIG.mapData.npcs.find(n => n.id === npcId);
   if (!npc) return;
   
-  // 跨NPC任务：守门弟子交付书信
   if (npcId === 'npc1' && state.npcQuestActive['npc2'] === 'delivering') {
     document.getElementById('dialogueLayer').classList.add('show');
     document.getElementById('dSpeaker').textContent = npc.name;
@@ -3189,7 +3214,6 @@ function startNpcDialogue(npcId) {
     return;
   }
   
-  // 跨NPC任务：杂役师兄交付回信
   if (npcId === 'npc2' && state.npcQuestActive['npc2'] === 'returning') {
     document.getElementById('dialogueLayer').classList.add('show');
     document.getElementById('dSpeaker').textContent = npc.name;
@@ -3201,7 +3225,6 @@ function startNpcDialogue(npcId) {
       state.cultivation += 30;
       state.npcQuestDone['npc2'] = true;
       delete state.npcQuestActive['npc2'];
-      // 消耗回信
       let it = state.bag.find(i => i.name === '回信' && !i.isEquip);
       if (it) { it.count--; if (it.count <= 0) state.bag.splice(state.bag.indexOf(it), 1); }
       alert('任务完成！修为+30，好感+10');
@@ -3211,8 +3234,11 @@ function startNpcDialogue(npcId) {
     return;
   }
   
-  // 普通任务
   if (npc.quest && !state.npcQuestDone[npcId]) {
+    if (npcId === 'npc_bingsi' && state.bingsiTask1 === 1) {
+      showNpcQuestNode(npc, 'active');
+      return;
+    }
     if (state.npcQuestActive[npcId]) { 
       let stage = state.npcQuestActive[npcId];
       if (typeof stage === 'string' && npc.quest.steps[stage]) { showNpcQuestNode(npc, stage); return; }
@@ -3251,8 +3277,18 @@ function showNpcQuestNode(npc, nodeId) {
       if (opt.action === 'close') closeDialogue();
       else if (opt.action === 'npcAcceptQuest') { 
         state.npcQuestActive[npc.id] = opt.questStage || true; 
+        if (npc.id === 'npc_bingsi') state.bingsiTask1 = 1;
         alert(`接取任务：${npc.quest.title}`); 
         closeDialogue(); if (mapLevel === 4) showNpcView(); 
+      }
+      else if (opt.action === 'bingsiCompleteQuest') {
+        let herb = state.bag.find(i => i.name === '蛇蜕草' && !i.isEquip);
+        if (!herb || herb.count < 10) return alert('蛇蜕草不足10份！');
+        herb.count -= 10;
+        if (herb.count <= 0) state.bag.splice(state.bag.indexOf(herb), 1);
+        state.bingsiTask1 = 2;
+        alert('兵司一阶任务完成！已解锁兵司铸制武器！');
+        closeDialogue(); updateUI(); if (mapLevel === 4) showNpcView();
       }
       else if (opt.action === 'npcCompleteQuest') {
         if (npc.quest.onComplete) npc.quest.onComplete(state);

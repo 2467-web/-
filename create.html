@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>异世界:命运 - 开局</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { font-family: -apple-system, sans-serif; background-color: #e5e8e0; color: #333; display: flex; justify-content: center; min-height: 100vh; }
+  #app { width: 100%; max-width: 420px; padding: 20px 16px 100px; position: relative; }
+  .main-card { background: #fdfdfc; border-radius: 16px; padding: 24px 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); border: 1px solid #e0e0e0; }
+  .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-size: 16px; font-weight: bold; }
+  #story-container { font-size: 14px; line-height: 1.8; color: #444; margin-bottom: 24px; }
+  .story-para { opacity: 0; transform: translateY(10px); transition: opacity 0.8s ease; margin-bottom: 12px; }
+  .story-para.show { opacity: 1; transform: translateY(0); }
+  .highlight { color: #c0392b; font-weight: bold; }
+  
+  #talent-panel { opacity: 0; pointer-events: none; transition: opacity 1s ease; }
+  #talent-panel.show { opacity: 1; pointer-events: auto; }
+  #talent-panel.hidden { display: none; }
+
+  #sect-panel { opacity: 0; pointer-events: none; transition: opacity 1s ease; display: none; }
+  #sect-panel.show { opacity: 1; pointer-events: auto; display: block; }
+  
+  .talent-box { background: #f7f9f5; border: 1.5px solid #9cb599; border-radius: 12px; padding: 12px 16px; margin-bottom: 12px; transition: 0.2s; position: relative; }
+  .clickable { cursor: pointer; }
+  .clickable:active { background: #eef2ea; }
+  .box-row { display: flex; gap: 12px; margin-bottom: 12px; }
+  .box-half { flex: 1; margin-bottom: 0; border-color: #b0c4b1; display: flex; flex-direction: column; }
+  .box-label { font-size: 12px; color: #777; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
+  .rarity-tag { color: #d4843e; font-weight: bold; background: #fdf3e1; padding: 2px 6px; border-radius: 4px; font-size: 11px; }
+  .box-title { font-size: 16px; font-weight: bold; margin-bottom: 6px; color: #222; }
+  .box-desc { font-size: 12px; color: #666; line-height: 1.4; }
+  .click-tip { font-size: 10px; background: #e0e0e0; color: #888; padding: 2px 6px; border-radius: 4px; }
+  
+  .spirit-bonus { margin-top: 8px; padding-top: 8px; border-top: 1px dashed #ccc; font-size: 11px; color: #c0392b; line-height: 1.4; }
+  .stats-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin: 20px 0; }
+  .stat-item { background: #f0f0f0; border-radius: 8px; text-align: center; padding: 8px 0; }
+  .stat-name { font-size: 11px; color: #888; margin-bottom: 4px; }
+  .stat-val { font-size: 16px; font-weight: bold; color: #333; }
+
+  .bottom-bar { position: fixed; bottom: 0; left: 0; right: 0; display: none; justify-content: center; padding: 12px 16px 24px; background: linear-gradient(to top, #e5e8e0 70%, transparent); z-index: 10; }
+  .bottom-bar.show { display: flex; }
+  .bottom-inner { width: 100%; max-width: 420px; display: flex; gap: 12px; }
+  .btn-reroll { width: 120px; background: #fdfdfc; border: 1.5px solid #c0392b; border-radius: 10px; color: #c0392b; font-size: 15px; font-weight: bold; cursor: pointer; }
+  .btn-start-game { flex: 1; background: #c0392b; border: none; border-radius: 10px; color: #fff; font-size: 18px; font-weight: bold; padding: 16px; cursor: pointer; }
+
+  #selectionModal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 100; display: flex; justify-content: center; align-items: flex-end; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+  #selectionModal.show { opacity: 1; pointer-events: auto; }
+  .modal-content { width: 100%; max-width: 420px; background: #fdfdfc; border-radius: 20px 20px 0 0; padding: 20px; transform: translateY(100%); transition: transform 0.3s; max-height: 70vh; overflow-y: auto; }
+  #selectionModal.show .modal-content { transform: translateY(0); }
+  .modal-item { background: #f7f9f5; border: 1px solid #d0d6ca; border-radius: 10px; padding: 12px; margin-bottom: 8px; cursor: pointer; }
+  .modal-item.selected { border-color: #c0392b; background: #fdf3f2; }
+  .modal-item-title { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 6px; }
+  .btn-close-modal { width: 100%; padding: 14px; background: #eef1eb; border: none; border-radius: 10px; font-size: 15px; color: #555; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div class="main-card">
+    <div class="header"><span>你的一生</span><span>开局</span></div>
+    <div id="story-container"></div>
+    
+    <div id="talent-panel">
+      <div class="talent-box clickable" onclick="openModal('origin')">
+        <div class="box-label"><span>出身</span><span class="click-tip">选择 ▾</span></div>
+        <div class="box-title"><span id="originTitle">--</span><span class="rarity-tag" id="originRarity">--</span></div>
+        <div class="box-desc" id="originDesc">--</div>
+      </div>
+
+      <div class="box-row">
+        <div class="talent-box box-half">
+          <div class="box-label"><span>体质</span></div>
+          <div class="box-title"><span id="bodyTitle">--</span><span class="rarity-tag" id="bodyRarity">--</span></div>
+          <div class="box-desc" id="bodyDesc">--</div>
+          
+          <div class="spirit-bonus">
+            <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+              <span>灵根：<span id="spiritTitle" style="font-weight:bold; color:#333;">--</span></span>
+              <span class="rarity-tag" id="spiritRarity">--</span>
+            </div>
+            <div id="spiritEffect">--</div>
+          </div>
+        </div>
+
+        <div class="talent-box box-half clickable" onclick="openModal('path')">
+          <div class="box-label"><span>修行路</span><span class="click-tip">选择 ▾</span></div>
+          <div class="box-title"><span id="pathTitle">--</span><span class="rarity-tag" id="pathRarity">--</span></div>
+          <div class="box-desc" id="pathDesc">--</div>
+        </div>
+      </div>
+
+      <div class="stats-grid" id="statsGrid"></div>
+    </div>
+    
+    <div id="sect-panel">
+      <div class="sub-title" style="margin: 0 0 12px 0; font-weight: bold;">选择你的宗门去处：</div>
+      <div class="grid-2" id="sectGrid"></div>
+    </div>
+  </div>
+</div>
+
+<div class="bottom-bar" id="bottom-bar">
+  <div class="bottom-inner">
+    <button class="btn-reroll" onclick="rerollTalent()">重抽体质</button>
+    <button class="btn-start-game" id="btn-main-action" onclick="handleMainAction()">就这样开始</button>
+  </div>
+</div>
+
+<div id="selectionModal" onclick="closeModal(event)">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <div class="modal-header" id="modalTitle">选择</div>
+    <div class="modal-list" id="modalList"></div>
+    <button class="btn-close-modal" onclick="closeModal(event)">取消</button>
+  </div>
+</div>
+
+<script>
+const CONFIG_DATA = {
+  origins: [
+    { title: '酒楼帮厨', rarity: '灵品', desc: '炼丹成功率 +15%' },
+    { title: '铁匠学徒', rarity: '凡品', desc: '初始根骨 +2' },
+    { title: '落魄书生', rarity: '玄品', desc: '初始悟性 +3' },
+    { title: '山野药童', rarity: '地品', desc: '采药必定获得双倍' }
+  ],
+  bodies: [
+    { title: '凡人之躯', rarity: '凡品', desc: '气血+10，无特殊弱点。' },
+    { title: '枯木逢春', rarity: '灵品', desc: '打坐修行速度+10%。' },
+    { title: '纯阳之体', rarity: '地品', desc: '突破概率+15%，免疫初级心魔。' },
+    { title: '极阴之体', rarity: '天品', desc: '邪气获取+50%，但受天雷克制。' }
+  ],
+  spirits: [
+    { title: '单系天灵根', rarity: '天品', effect: '修炼速度+50%，突破概率大幅提升。' },
+    { title: '双系真灵根', rarity: '地品', effect: '修炼速度+25%，法术威力略微提升。' },
+    { title: '三系伪灵根', rarity: '玄品', effect: '修炼速度+5%，杂役消耗精力减少。' },
+    { title: '五行杂灵根', rarity: '凡品', effect: '修炼速度-20%，但奇遇概率翻倍。' }
+  ],
+  paths: [
+    { title: '体修', rarity: '玄品', desc: '淬炼肉身，以力破万法，近战强悍。' },
+    { title: '法修', rarity: '玄品', desc: '感悟天地灵气，修习法术，远程杀敌。' },
+    { title: '散人', rarity: '天品', desc: '无门无派，自在逍遥，但缺乏靠山。' }
+  ],
+  stats: [
+    { key: 'wu', name: '悟性', min: 3, max: 10 },
+    { key: 'cai', name: '才情', min: 3, max: 10 },
+    { key: 'body', name: '身法', min: 3, max: 10 },
+    { key: 'mind', name: '神识', min: 3, max: 10 },
+    { key: 'luck', name: '气运', min: 3, max: 10 },
+    { key: 'dao', name: '心性', min: 3, max: 10 }
+  ]
+};
+
+const SECTS_LIST = {
+  '法修': [
+    { title: '小石头门', align: '正派', desc: '正派法修宗门，根基深厚。' },
+    { title: '马吉克学院', align: '正派', desc: '正派法修学院，理论至上。' },
+    { title: '玉国魔宗分支', align: '反派', desc: '反派法修魔宗，功法诡谲。' },
+    { title: '奥托尔教', align: '反派', desc: '反派法修教派，行事极端。' }
+  ],
+  '体修': [
+    { title: '小石头门', align: '正派', desc: '正派体修宗门，硬桥硬马。' },
+    { title: '汉特学院', align: '正派', desc: '正派体修学院，纪律严明。' },
+    { title: '玉国魔宗分支', align: '反派', desc: '反派体修魔宗，残忍嗜血。' },
+    { title: '奥托尔教', align: '反派', desc: '反派体修教派，狂热好战。' }
+  ]
+};
+
+let currentOriginIndex = 0, currentBodyIndex = 0, currentPathIndex = 0, currentSpiritIndex = 0, currentStats = {};
+let currentStage = 'talent';
+let isFirstPlay = true; // 控制动画只播一次
+
+window.onload = () => { initData(); };
+
+function initData() {
+  currentBodyIndex = Math.floor(Math.random() * CONFIG_DATA.bodies.length);
+  currentSpiritIndex = Math.floor(Math.random() * CONFIG_DATA.spirits.length);
+  updateUI();
+  rollStats();
+  playStory(true); 
+}
+
+function playStory(first = false) {
+  const s = CONFIG_DATA.spirits[currentSpiritIndex];
+  const b = CONFIG_DATA.bodies[currentBodyIndex];
+  
+  const container = document.getElementById('story-container');
+  
+  if (first) {
+    container.innerHTML = '';
+    const storyTexts = [
+      `测灵石上光芒闪烁，你睁开眼，发现自己觉醒了<span class="highlight">${s.title}</span>。`,
+      `你天生拥有<span class="highlight">${b.title}</span>，${b.desc}`,
+      `同批的少年都进了外门，你被分去杂役院挑水。`
+    ];
+    let delay = 0;
+    storyTexts.forEach((text) => {
+      const p = document.createElement('div');
+      p.className = 'story-para'; p.innerHTML = text; container.appendChild(p);
+      setTimeout(() => p.classList.add('show'), delay);
+      delay += 1200;
+    });
+    
+    setTimeout(() => {
+      document.getElementById('talent-panel').classList.add('show');
+      document.getElementById('bottom-bar').classList.add('show');
+    }, delay + 500);
+  } else {
+    // 重抽时直接修改文字内容，不重播动画
+    container.innerHTML = `
+      <div class="story-para show">你重新凝神测灵……</div>
+      <div class="story-para show">新的结果为：<span class="highlight">${s.title}</span>。</div>
+      <div class="story-para show">以及<span class="highlight">${b.title}</span>。</div>
+    `;
+  }
+}
+
+function updateUI() {
+  const o = CONFIG_DATA.origins[currentOriginIndex];
+  document.getElementById('originTitle').innerText = o.title;
+  document.getElementById('originRarity').innerText = o.rarity;
+  document.getElementById('originDesc').innerText = o.desc;
+  
+  const b = CONFIG_DATA.bodies[currentBodyIndex];
+  document.getElementById('bodyTitle').innerText = b.title;
+  document.getElementById('bodyRarity').innerText = b.rarity;
+  document.getElementById('bodyDesc').innerText = b.desc;
+
+  const s = CONFIG_DATA.spirits[currentSpiritIndex];
+  document.getElementById('spiritTitle').innerText = s.title;
+  document.getElementById('spiritRarity').innerText = s.rarity;
+  document.getElementById('spiritEffect').innerText = s.effect;
+
+  const p = CONFIG_DATA.paths[currentPathIndex];
+  document.getElementById('pathTitle').innerText = p.title;
+  document.getElementById('pathRarity').innerText = p.rarity;
+  document.getElementById('pathDesc').innerText = p.desc;
+}
+
+function rollStats() {
+  const statsList = CONFIG_DATA.stats;
+  let tempStats = {};
+  statsList.forEach(s => tempStats[s.key] = 3); 
+  let remain = 25 - (statsList.length * 3); 
+  while (remain > 0) {
+    let idx = Math.floor(Math.random() * statsList.length);
+    let key = statsList[idx].key;
+    if (tempStats[key] < 10) { tempStats[key]++; remain--; }
+  }
+  const grid = document.getElementById('statsGrid');
+  grid.innerHTML = ''; 
+  statsList.forEach(stat => {
+    currentStats[stat.key] = tempStats[stat.key];
+    grid.innerHTML += `<div class="stat-item"><div class="stat-name">${stat.name}</div><div class="stat-val">${tempStats[stat.key]}</div></div>`;
+  });
+}
+
+function rerollTalent() {
+  currentBodyIndex = Math.floor(Math.random() * CONFIG_DATA.bodies.length);
+  currentSpiritIndex = Math.floor(Math.random() * CONFIG_DATA.spirits.length);
+  updateUI(); rollStats();
+  playStory(false); // 不重播动画
+  
+  const grid = document.getElementById('statsGrid');
+  grid.style.opacity = '0.5'; setTimeout(() => grid.style.opacity = '1', 200);
+}
+
+function openModal(type) {
+  const modal = document.getElementById('selectionModal');
+  const title = document.getElementById('modalTitle');
+  const list = document.getElementById('modalList');
+  list.innerHTML = '';
+  let dataList = type === 'origin' ? CONFIG_DATA.origins : CONFIG_DATA.paths;
+  let currentIndex = type === 'origin' ? currentOriginIndex : currentPathIndex;
+  title.innerText = type === 'origin' ? '选择出身' : '选择修行路';
+
+  dataList.forEach((item, index) => {
+    const div = document.createElement('div');
+    div.className = `modal-item ${index === currentIndex ? 'selected' : ''}`;
+    div.innerHTML = `<div class="modal-item-title"><span>${item.title}</span><span class="rarity-tag">${item.rarity}</span></div><div class="modal-item-desc">${item.desc}</div>`;
+    div.onclick = () => {
+      if (type === 'origin') currentOriginIndex = index;
+      if (type === 'path') currentPathIndex = index;
+      updateUI(); closeModal();
+    };
+    list.appendChild(div);
+  });
+  modal.classList.add('show');
+}
+
+function closeModal(e) {
+  if (e && e.target !== document.getElementById('selectionModal') && !e.target.classList.contains('btn-close-modal')) return;
+  document.getElementById('selectionModal').classList.remove('show');
+}
+
+function handleMainAction() {
+  if (currentStage === 'talent') {
+    const pathTitle = CONFIG_DATA.paths[currentPathIndex].title;
+    if (pathTitle === '散人') { saveAndGo('散人', '中立'); return; }
+    
+    currentStage = 'sect';
+    document.getElementById('talent-panel').classList.add('hidden');
+    document.getElementById('bottom-bar').classList.remove('show');
+    
+    const container = document.getElementById('story-container');
+    container.innerHTML = '';
+    const p1 = document.createElement('div');
+    p1.className = 'story-para show';
+    p1.innerHTML = `你选择了<span class="highlight">${pathTitle}</span>之路。<br><br>随着你踏出杂役院，几位宗门的使者向你走来……`;
+    container.appendChild(p1);
+    setTimeout(() => { showSectPanel(pathTitle); }, 1200);
+  }
+}
+
+function showSectPanel(pathTitle) {
+  const sectPanel = document.getElementById('sect-panel');
+  const sectGrid = document.getElementById('sectGrid');
+  const sects = SECTS_LIST[pathTitle] || [];
+  sectGrid.innerHTML = '';
+  
+  sects.forEach(sect => {
+    const box = document.createElement('div');
+    box.className = 'talent-box clickable';
+    box.innerHTML = `<div class="box-label"><span>${sect.align}</span></div><div class="box-title">${sect.title}</div><div class="box-desc">${sect.desc}</div>`;
+    box.onclick = () => {
+      document.querySelectorAll('#sectGrid .talent-box').forEach(b => b.style.borderColor = '#b0c4b1');
+      box.style.borderColor = '#c0392b';
+      setTimeout(() => { saveAndGo(sect.title, sect.align); }, 800);
+    };
+    sectGrid.appendChild(box);
+  });
+  sectPanel.classList.add('show');
+}
+
+function saveAndGo(sectName, align) {
+  const playerData = {
+    origin: CONFIG_DATA.origins[currentOriginIndex],
+    body: CONFIG_DATA.bodies[currentBodyIndex],
+    spirit: CONFIG_DATA.spirits[currentSpiritIndex],
+    path: CONFIG_DATA.paths[currentPathIndex].title,
+    sect: sectName, align: align, stats: currentStats
+  };
+  localStorage.setItem('playerData', JSON.stringify(playerData));
+  window.location.href = 'index.html'; 
+}
+</script>
+</body>
+</html>
